@@ -1,4 +1,5 @@
 import threading
+import multiprocessing
 import functools
 from time import perf_counter, perf_counter_ns, sleep
 from random import randint
@@ -40,10 +41,10 @@ def benchmark(functionCallback):
     return wrapArround
 
 
-def threaded_print(ThreadName, iterationsOrDelay, lock, mockTime: bool = False):
+def func_to_test(type, index, iterationsOrDelay, lock, mockTime: bool = False):
     """ This function will compute 900 random integers or mock a delay between 1 and 5 seconds
-
-    :param ThreadName: Index of current thread
+    :param type: Process || Thread
+    :param index: Index of current thread or process
     :param iterationsOrDelay: Number of iterations or value of the random delay value to simulate heavy processing
     :param lock: Lock for printing each line without other thread interruptions
     :param mockTime: Defines if the function will use a random delay or compute <iterationsOrDelay> random integers
@@ -52,17 +53,17 @@ def threaded_print(ThreadName, iterationsOrDelay, lock, mockTime: bool = False):
     if mockTime:
         sleep(iterationsOrDelay)
         with lock:  # Use lock to ensure that each print is in a new line
-            print("Thread {}:  random delay of {}".format(ThreadName, iterationsOrDelay))
+            print("Thread {}:  random delay of {}".format(index, iterationsOrDelay))
     else:
         for i in range(iterationsOrDelay):
             randomInteger = randint(1, 999999)
             with lock:  # Use lock to ensure that each print is in a new line
-                print("Thread {}: {}".format(ThreadName, randomInteger))
+                print("{} {}: {}".format(type, index, randomInteger))
 
 
 @benchmark
 def firstBlock(mockExecutionTime: bool = False):
-    """ Creates 4 threads that execute the function threaded_print and returns the string "Return Some Value"
+    """ Creates 4 threads that execute "func_to_test" in parallel and returns the string "Return Some Value"
     :param mockExecutionTime: if true will create a random small delay for each thread to simulate processing time
     :return: Returns "Return Some Value"
     :rtype: str
@@ -76,8 +77,8 @@ def firstBlock(mockExecutionTime: bool = False):
     for i in range(4):
         # If mock value is true computes a random time delay for each thread
         delay = randint(1, 5) if mockExecutionTime else 0
-        thread = threading.Thread(target=threaded_print,
-                                  args=(i, delay | iterations, printLock),
+        thread = threading.Thread(target=func_to_test,
+                                  args=("Thread", i, delay | iterations, printLock),
                                   kwargs={'mockTime': mockExecutionTime})
         thread.start()
         listOfThreads.append(thread)
@@ -91,9 +92,24 @@ def firstBlock(mockExecutionTime: bool = False):
 
 
 @benchmark
-def secondBlock():
-    pass
+def secondBlock(mockExecutionTime: bool = False):
+    """ Creates 4 subprocesses that execute "func_to_test" in parallel
+    :param mockExecutionTime:
+    :return: None
+    """
+    listOfProcesses = []
+    iterations = 0 if mockExecutionTime else 900
+    printLock = multiprocessing.Lock()
+    for i in range(4):
+        delay = randint(1, 5) if mockExecutionTime else 0
+        process = multiprocessing.Process(target=func_to_test,
+                                          args=("Process", i, delay | iterations, printLock),
+                                          kwargs={'mockTime': mockExecutionTime})
+        process.start()
+        listOfProcesses.append(process)
 
+    for process in listOfProcesses:
+        process.join()
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
@@ -103,3 +119,9 @@ if __name__ == '__main__':
     firstBlockExecTime, ret = firstBlock()
     # Proof that we still have access to the return value of the firstBlock function
     print(ret)
+
+    secondBlockExecTime, _ = secondBlock()
+
+    print("-------------------------------------------\n"
+          "Threads execution time in seconds: {:f} \n"
+          "Processes execution time in seconds: {:f}".format(firstBlockExecTime, secondBlockExecTime))
