@@ -60,7 +60,6 @@ def func_to_test(type, index, iterationsOrDelay, lock, mockTime: bool = False):
             with lock:  # Use lock to ensure that each print is in a new line
                 print("{} {}: {}".format(type, index, randomInteger))
 
-
 @benchmark
 def firstBlock(mockExecutionTime: bool = False):
     """ Creates 4 threads that execute "func_to_test" in parallel and returns the string "Return Some Value"
