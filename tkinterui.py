@@ -1,6 +1,7 @@
 import threading
 import multiprocessing
 import functools
+import time
 from time import perf_counter
 from random import randint
 import tkinter as tk
@@ -35,9 +36,9 @@ def commonTask():
 
 
 class UserInterfaceCoparison(tk.Tk):
-    def __init__(self, screenName="Process vs Thread Comparison"):
-        super().__init__(screenName=screenName)
-        self.title(screenName)
+    def __init__(self):
+        super().__init__()
+        self.title("Process vs Thread Comparison")
         self.width = 600
         self.height = 500
         self.geometry("{}x{}".format(self.width, self.height))
@@ -122,16 +123,16 @@ class UserInterfaceCoparison(tk.Tk):
         range1:     * - - - e - - *
         range2:             * - - - - *
 
-        Align:              * - - - e - - *
-                            * - - - - *
-        would return value 8
+        Align:      * - - - e - - *
+                    * - - - - *
+        would return value 4
 
         :param value: Value to be converted to the different range
         :param largestStart: Start time of a function with the latest start time
         :param lowerStart: Start time of a function with the earliest start time
         :return: Value of an event as if both functions started at the same time
         """
-        return (float(largestStart) - float(lowerStart)) + float(value)
+        return float(value) - (float(largestStart) - float(lowerStart))
 
     def mapRanges(self, value, timeStart, timeEnd, windStart, windEnd):
         """ Maps a value in one range to a second range
@@ -176,13 +177,16 @@ class UserInterfaceCoparison(tk.Tk):
                 tk.Label(self.resultsPanel, text=threadResultToString, name="threadResults").pack(anchor=tk.W)
                 tk.Label(self.resultsPanel, text=processResultToString, name="processResults").pack(anchor=tk.W)
 
+        isThreadFaster = processExecutionTime > threadExecutionTime
         # Get the start and end time of the slowest code block
-        largestRange = processResults if processExecutionTime > threadExecutionTime else threadResults
+        largestRange = processResults if isThreadFaster else threadResults
+        if isThreadFaster:
+            largestRange = (self.convertRange(largestRange[0], processResults[0], threadResults[0]),
+                            self.convertRange(largestRange[1], processResults[0], threadResults[0]))
+
         # Get the end time of the fastest code block
-        timeOfFastestEnd = self.convertRange(threadResults[1],
-                                             processResults[0],
-                                             threadResults[0]) \
-            if processExecutionTime > threadExecutionTime else processResults[1]
+        timeOfFastestEnd = threadResults[1] if isThreadFaster else\
+            self.convertRange(processResults[1], processResults[0], threadResults[0])
 
         # Responsible for painting the graph and comparing the threaded code block as if it started at the same
         # time as the process code block.
@@ -206,23 +210,22 @@ class UserInterfaceCoparison(tk.Tk):
 
             # Draw the bars for each thread
             for i, threadIdentifier in enumerate(list(thrSubTimes.keys())):
-                convertedStartTime = \
-                    self.convertRange(thrSubTimes[threadIdentifier][0], processResults[0], threadResults[0])
-                convertedEndTime = \
-                    self.convertRange(thrSubTimes[threadIdentifier][1], processResults[0], threadResults[0])
 
                 startYpos = bar_height * i + 10
                 endYpos = startYpos + bar_height
-                startXpos = self.mapRanges(convertedStartTime, largestRange[0], largestRange[1], 80, graph_width + 80)
-                endXpos = self.mapRanges(convertedEndTime, largestRange[0], largestRange[1], 80, graph_width + 80)
+                startXpos = self.mapRanges(thrSubTimes[threadIdentifier][0], largestRange[0], largestRange[1], 80, graph_width + 80)
+                endXpos = self.mapRanges(thrSubTimes[threadIdentifier][1], largestRange[0], largestRange[1], 80, graph_width + 80)
                 self.canvas.create_rectangle(startXpos, startYpos, endXpos, endYpos, fill='red')
 
             # Draw the bars for each process
             for i, pid in enumerate(list(procSubTimes.keys())):
+                convertedStartTime = self.convertRange(procSubTimes[pid][0], processResults[0], threadResults[0])
+                convertedEndTime = self.convertRange(procSubTimes[pid][1], processResults[0], threadResults[0])
+
                 startYpos = bar_height * (i + 4) + 10
                 endYpos = startYpos + bar_height
-                startXpos = self.mapRanges(procSubTimes[pid][0], largestRange[0], largestRange[1], 80, graph_width + 80)
-                endXpos = self.mapRanges(procSubTimes[pid][1], largestRange[0], largestRange[1], 80, graph_width + 80)
+                startXpos = self.mapRanges(convertedStartTime, largestRange[0], largestRange[1], 80, graph_width + 80)
+                endXpos = self.mapRanges(convertedEndTime, largestRange[0], largestRange[1], 80, graph_width + 80)
                 self.canvas.create_rectangle(startXpos, startYpos, endXpos, endYpos, fill='blue')
             # Get X coordinate for the end of execution of the fastest block
             endOfFastest = self.mapRanges(timeOfFastestEnd, largestRange[0], largestRange[1], 80, graph_width + 80)

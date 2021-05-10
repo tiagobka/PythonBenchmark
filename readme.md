@@ -21,25 +21,36 @@ Consult the Internet.  Consult books.   Please do not consult people.   The idea
 
 ## UI Demo
 **Use the toggle button to activate the graphing area**
+
 ![Initial](./demo/InitialScreen.png)
 
 **Click on "Compare execution time" to compare the execution time of 4 threads vs 4 processes**
+
 ![InitialToggle](./demo/InitialScreenWithGraph.png)
 
 **Get the execution time and a nice graph showing when each thread or process started and ended** 
+
 ![Graphdemo](./demo/GraphDemo.png)
+
+**UI on Ubuntu 18.04**
+![LinuxDemo](./demo/LinuxDemo.png)
 
 
 ### Prerequisites
 - Python 3.7
 
 ### Packages
-    This script does not require aditional packages or extra installations
+
 **Packages used:**
 - threading
 - multiprocessing
 - functools
 - time
 - random
-- tkinter
 - collections
+- tkinter
+
+
+    You might have to install tkinter on your system
+    e.g: 
+    sudo apt-get install python-tk
